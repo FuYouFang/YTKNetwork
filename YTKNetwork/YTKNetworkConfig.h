@@ -40,6 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 ///  YTKCacheDirPathFilterProtocol can be used to append common path components when caching response results
+/// 用于缓存响应结果时添加公共地址部分
 @protocol YTKCacheDirPathFilterProtocol <NSObject>
 ///  Preprocess cache path before actually saving them.
 ///
@@ -47,6 +48,11 @@ NS_ASSUME_NONNULL_BEGIN
 ///  @param request    request itself
 ///
 ///  @return A new path which will be used as base path when caching.
+///  在缓存之前预处理缓存路径
+///
+///  originPath 在 YTKRequest 中生成的缓存基础路径
+///  request 请求本身
+///  return 在缓存时使用的一个新路径
 - (NSString *)filterCacheDirPath:(NSString *)originPath withRequest:(YTKBaseRequest *)request;
 @end
 
@@ -67,6 +73,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///  URL filters. See also `YTKUrlFilterProtocol`.
 @property (nonatomic, strong, readonly) NSArray<id<YTKUrlFilterProtocol>> *urlFilters;
 ///  Cache path filters. See also `YTKCacheDirPathFilterProtocol`.
+///  缓存文件路径适配，在 Request 中缓存文件会调用
 @property (nonatomic, strong, readonly) NSArray<id<YTKCacheDirPathFilterProtocol>> *cacheDirPathFilters;
 ///  Security policy will be used by AFNetworking. See also `AFSecurityPolicy`.
 @property (nonatomic, strong) AFSecurityPolicy *securityPolicy;

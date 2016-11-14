@@ -22,10 +22,14 @@
 
 /// Send batch request
 - (void)sendBatchRequest {
+    
     GetImageApi *a = [[GetImageApi alloc] initWithImageId:@"1.jpg"];
     GetImageApi *b = [[GetImageApi alloc] initWithImageId:@"2.jpg"];
     GetImageApi *c = [[GetImageApi alloc] initWithImageId:@"3.jpg"];
+    
     GetUserInfoApi *d = [[GetUserInfoApi alloc] initWithUserId:@"123"];
+    
+    // 批处理
     YTKBatchRequest *batchRequest = [[YTKBatchRequest alloc] initWithRequestArray:@[a, b, c, d]];
     [batchRequest startWithCompletionBlockWithSuccess:^(YTKBatchRequest *batchRequest) {
         NSLog(@"succeed");
@@ -39,6 +43,8 @@
     } failure:^(YTKBatchRequest *batchRequest) {
         NSLog(@"failed");
     }];
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:@":" object:nil];
 }
 
 - (void)sendChainRequest {
@@ -55,6 +61,7 @@
     // start to send request
     [chainReq start];
 }
+
 
 - (void)chainRequestFinished:(YTKChainRequest *)chainRequest {
     // all requests are done

@@ -72,6 +72,7 @@ void YTKLog(NSString *format, ...) {
         return result;
     } else if ([json isKindOfClass:[NSArray class]] &&
                [jsonValidator isKindOfClass:[NSArray class]]) {
+        
         NSArray * validatorArray = (NSArray *)jsonValidator;
         if (validatorArray.count > 0) {
             NSArray * array = json;
@@ -135,7 +136,9 @@ void YTKLog(NSString *format, ...) {
         return nil;
 
     const char *value = [string UTF8String];
-
+    // MD5消息摘要算法（英语：MD5 Message-Digest Algorithm），
+    // 一种被广泛使用的密码散列函数，可以产生出一个128位（16字节）的散列值（hash value），用于确保信息传输完整一致。
+    
     unsigned char outputBuffer[CC_MD5_DIGEST_LENGTH];
     CC_MD5(value, (CC_LONG)strlen(value), outputBuffer);
 
@@ -154,6 +157,26 @@ void YTKLog(NSString *format, ...) {
 + (NSStringEncoding)stringEncodingWithRequest:(YTKBaseRequest *)request {
     // From AFNetworking 2.6.3
     NSStringEncoding stringEncoding = NSUTF8StringEncoding;
+    
+    /*!
+     @method textEncodingName
+     @abstract Returns the name of the text encoding of the receiver.
+     @discussion This name will be the actual string reported by the
+     origin source during the course of performing a protocol-specific
+     URL load. Clients can inspect this string and convert it to an
+     NSStringEncoding or CFStringEncoding using the methods and
+     functions made available in the appropriate framework.
+     @result The name of the text encoding of the receiver, or nil if no
+     text encoding was specified.
+     */
+    
+    /*
+     返回响应编码格式的名称
+     在加载特定协议的 URL 地址时的原始数据的字符串的名称。
+     客户端可以检查这个字符串，可以使用合适的框架中提供的方法和函数将他转化成 NSStringEncoding
+     或者 CFStringEncoding。
+     */
+    
     if (request.response.textEncodingName) {
         CFStringEncoding encoding = CFStringConvertIANACharSetNameToEncoding((CFStringRef)request.response.textEncodingName);
         if (encoding != kCFStringEncodingInvalidId) {

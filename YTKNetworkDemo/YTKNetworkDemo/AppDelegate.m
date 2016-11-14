@@ -21,6 +21,26 @@
     YTKNetworkConfig *config = [YTKNetworkConfig sharedConfig];
     YTKUrlArgumentsFilter *urlFilter = [YTKUrlArgumentsFilter filterWithArguments:@{@"version": appVersion}];
     [config addUrlFilter:urlFilter];
+    
+    
+    //**
+
+    //if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:])
+    if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){.majorVersion = 9, .minorVersion = 1, .patchVersion = 0}]) {
+        NSLog(@"hello from > iOS 9.1.0");
+    }
+    if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9, 3, 0}]) {
+        NSLog(@"hello from > iOS 9.3");
+    }
+    
+    if (NSFoundationVersionNumber >= NSFoundationVersionNumber_iOS_9_0) {
+        NSLog(@"hello from > iOS 9.0");
+    }
+    
+    // http://www.jianshu.com/p/0cb656c958da
+    // http://www.jianshu.com/p/9dcf52ac4d0c
+    //**
+    
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {

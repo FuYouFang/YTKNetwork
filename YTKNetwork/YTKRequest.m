@@ -25,6 +25,7 @@
 #import "YTKRequest.h"
 #import "YTKNetworkPrivate.h"
 
+// 因为在较低的系统版本中，并没有 _iOS_8_0 的定义
 #ifndef NSFoundationVersionNumber_iOS_8_0
 #define NSFoundationVersionNumber_With_QoS_Available 1140.11
 #else
@@ -37,19 +38,62 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     static dispatch_queue_t queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
+        /*
+        dispatch_queue_attr_t attr：队列的属性，属性有两个，分别为：
+        DISPATCH_QUEUE_SERIAL(NULL)   串行队列
+        DISPATCH_QUEUE_CONCURRENT     并发队列
+        */
         dispatch_queue_attr_t attr = DISPATCH_QUEUE_SERIAL;
         if (NSFoundationVersionNumber >= NSFoundationVersionNumber_With_QoS_Available) {
+            /*
+            创建队列所需要的属性dispatch_queue_attr_make_with_qos_class
+            函数：
+            dispatch_queue_attr_make_with_qos_class(dispatch_queue_attr_t attr, dispatch_qos_class_t qos_class, int_relative_priority);
+            返回一个属性，适用于创建一个想要的服务质量信息的调度队列。主要用于dispatch_queue_create函数。适用于OS X v10.10及以后或iOS v8.0及以后的版本。
+            
+            当你想要创建一个指定服务质量（QOS）级别的GCD队列的时候，在调用dispatch_queue_create函数之前先要调用本函数。
+            这个函数结合了你指定的QOS信息的调度队列类型属性，并且返回了一个可以传递到dispatch_queue_create函数中的值。
+            你通过这个函数指定了这个QOS的值，这个值要优先于从调度队列目标队列中继承的优先级。
+            
+            全局队列的优先级与QOS的等级映射关系如下：
+            
+            DISPATCH_QUEUE_PRIORITY_HIGH  <===>  QOS_CLASS_USER_INITIATED
+            DISPATCH_QUEUE_PRIORITY_DEFAULT    <===> QOS_CLASS_UTILITY
+            DISPATCH_QUEUE_PRIORITY_LOW  <===> QOS_CLASS_UTILITY
+            DISPATCH_QUEUE_PRIORITY_BACKGROUND  <===>  QOS_CLASS_BACKGROUND
+            
+            attr，一个结合了服务质量级别的队列属性值。指定attr为DISPATCH_QUEUE_SERIAL让这些提交的任务一个一个的运行，或者指定为DISPATCH_QUEUE_CONCURRENT让这些任务同时运行。如果你指定为NULL，则这个函数创建一个串行队列。
+            
+            qos_class，你想要在这个队列中执行任务的服务质量（QOS）。QOS帮助我们确定这个队列中的任务执行优先级。可以指定QOS_CLASS_USER_INTERACTIVE，QOS_CLASS_USER_INITIATED，QOS_CLASS_UTILITY或QOS_CLASS_BACKGROUND中的一个。操作user-interactiver或user-initiated任务的队列要比其他一般在后台运行的任务队列有更高的优先级。
+            
+            relative_priority，一个在QOS等级内的相对优先级。这个值是一个支持给定QOS调度优先级最大值的负偏差，。这个值必须大于0并且要小于QOS_MIN_RELATIVE_PRIORITY。
+            */
             attr = dispatch_queue_attr_make_with_qos_class(attr, QOS_CLASS_BACKGROUND, 0);
         }
         queue = dispatch_queue_create("com.yuantiku.ytkrequest.caching", attr);
     });
+    
+    //**
+    // 获得系统版本
+    // floor(NSFoundationVersionNumber)
+    //**
 
     return queue;
 }
 
+/**
+ NSSecureCoding
+ http://nshipster.cn/nssecurecoding/
+ 1. + (BOOL)supportsSecureCoding 应该返回 YES
+ 2. 在 - initWithCoder:(NSCoder *)aCoder 中应该使用下面方法来解析字段
+    - (nullable id)decodeObjectOfClass:(Class)aClass forKey:(NSString *)key
+    而不是
+    - (nullable id)decodeObjectForKey:(NSString *)key;
+ */
 @interface YTKCacheMetadata : NSObject<NSSecureCoding>
 
 @property (nonatomic, assign) long long version;
+// 敏感的数据字符串
 @property (nonatomic, strong) NSString *sensitiveDataString;
 @property (nonatomic, assign) NSStringEncoding stringEncoding;
 @property (nonatomic, strong) NSDate *creationDate;
@@ -64,6 +108,7 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
+
     [aCoder encodeObject:@(self.version) forKey:NSStringFromSelector(@selector(version))];
     [aCoder encodeObject:self.sensitiveDataString forKey:NSStringFromSelector(@selector(sensitiveDataString))];
     [aCoder encodeObject:@(self.stringEncoding) forKey:NSStringFromSelector(@selector(stringEncoding))];
@@ -77,12 +122,13 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
         return nil;
     }
 
+    // ?? version 的类型为 long long，但是此处转换为了 integerValue?
     self.version = [[aDecoder decodeObjectOfClass:[NSNumber class] forKey:NSStringFromSelector(@selector(version))] integerValue];
     self.sensitiveDataString = [aDecoder decodeObjectOfClass:[NSString class] forKey:NSStringFromSelector(@selector(sensitiveDataString))];
     self.stringEncoding = [[aDecoder decodeObjectOfClass:[NSNumber class] forKey:NSStringFromSelector(@selector(stringEncoding))] integerValue];
     self.creationDate = [aDecoder decodeObjectOfClass:[NSDate class] forKey:NSStringFromSelector(@selector(creationDate))];
     self.appVersionString = [aDecoder decodeObjectOfClass:[NSString class] forKey:NSStringFromSelector(@selector(appVersionString))];
-
+    
     return self;
 }
 
@@ -118,12 +164,14 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
         [self startWithoutCache];
         return;
     }
-
+    
+    // 从缓存中获取了相应的数据
     _dataFromCache = YES;
 
     dispatch_async(dispatch_get_main_queue(), ^{
         [self requestCompletePreprocessor];
         [self requestCompleteFilter];
+        // 此处为什么又定义了一个 strongSelf ？？
         YTKRequest *strongSelf = self;
         [strongSelf.delegate requestFinished:strongSelf];
         if (strongSelf.successCompletionBlock) {
@@ -245,6 +293,11 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     return YES;
 }
 
+/// 测试缓存数据是否有效
+/// 1.时间是否超出缓存时间长度
+/// 2.缓存数据的 version 是否和 self 的相同
+/// 3.缓存的敏感数据和 self 的是否相同
+/// 4.缓存数据的 app 版本是否和现在的相同
 - (BOOL)validateCacheWithError:(NSError * _Nullable __autoreleasing *)error {
     // Date
     NSDate *creationDate = self.cacheMetadata.creationDate;
@@ -256,6 +309,7 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
         return NO;
     }
     // Version
+    // 查看 metadata 的 version 和 self 的 cashVersion 是否相符
     long long cacheVersionFileContent = self.cacheMetadata.version;
     if (cacheVersionFileContent != [self cacheVersion]) {
         if (error) {
@@ -304,6 +358,8 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     return NO;
 }
 
+/// 加载 cacheData
+/// 给 _cacheData, _cacheString, _cacheJson, _cacheXML 赋值
 - (BOOL)loadCacheData {
     NSString *path = [self cacheFilePath];
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -374,9 +430,14 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     }
 }
 
+/// 创建文件夹，并设置文件夹不同步到 iCloud
 - (void)createBaseDirectoryAtPath:(NSString *)path {
     NSError *error = nil;
-    [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES
+    // 创建目录
+    // intermediate 参数如果为 NO 的话，需要保证在调用的时候文件不存在
+    // 为 YES 的时候，会自动创建相应的中间目录。
+    [[NSFileManager defaultManager] createDirectoryAtPath:path
+                              withIntermediateDirectories:YES
                                                attributes:nil error:&error];
     if (error) {
         YTKLog(@"create cache directory failed, error = %@", error);
@@ -385,6 +446,7 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     }
 }
 
+/// 生成缓存的基本路径
 - (NSString *)cacheBasePath {
     NSString *pathOfLibrary = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
     NSString *path = [pathOfLibrary stringByAppendingPathComponent:@"LazyRequestCache"];
@@ -401,6 +463,9 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     return path;
 }
 
+/// 生成缓存文件目录的方法
+/// 根据 baseUrl， requestUrl，argument（经过过滤）组合的字符串，
+/// 然后对字符串进行 MD5
 - (NSString *)cacheFileName {
     NSString *requestUrl = [self requestUrl];
     NSString *baseUrl = [YTKNetworkConfig sharedConfig].baseUrl;
@@ -411,6 +476,7 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     return cacheFileName;
 }
 
+/// 合并生成缓存路径
 - (NSString *)cacheFilePath {
     NSString *cacheFileName = [self cacheFileName];
     NSString *path = [self cacheBasePath];
@@ -418,6 +484,7 @@ static dispatch_queue_t ytkrequest_cache_writing_queue() {
     return path;
 }
 
+/// 合成 metadata 缓存文件
 - (NSString *)cacheMetadataFilePath {
     NSString *cacheMetadataFileName = [NSString stringWithFormat:@"%@.metadata", [self cacheFileName]];
     NSString *path = [self cacheBasePath];

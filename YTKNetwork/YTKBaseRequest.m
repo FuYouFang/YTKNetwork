@@ -25,11 +25,14 @@
 #import "YTKNetworkAgent.h"
 #import "YTKNetworkPrivate.h"
 
+// 此宏传入一个你想引入文件的名称作为参数，如果该文件能够被引入则返回1，否则返回0。
 #if __has_include(<AFNetworking/AFNetworking.h>)
 #import <AFNetworking/AFNetworking.h>
 #else
 #import "AFNetworking.h"
 #endif
+
+
 
 NSString *const YTKRequestValidationErrorDomain = @"com.yuantiku.request.validation";
 

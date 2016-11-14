@@ -38,6 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (YTKNetworkAgent *)sharedAgent;
 
 ///  Add request to session and start it.
+///  添加请求，并开始
 - (void)addRequest:(YTKBaseRequest *)request;
 
 ///  Cancel a request that was previously added.

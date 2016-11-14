@@ -33,7 +33,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+// http://blog.sunnyxx.com/2014/09/15/objc-attribute-cleanup/
+// 这里有 NS_FORMAT_FUNCTION 的介绍
 FOUNDATION_EXPORT void YTKLog(NSString *format, ...) NS_FORMAT_FUNCTION(1,2);
+
 
 @interface YTKNetworkUtils : NSObject
 
@@ -42,8 +45,10 @@ FOUNDATION_EXPORT void YTKLog(NSString *format, ...) NS_FORMAT_FUNCTION(1,2);
 + (NSString *)urlStringWithOriginUrlString:(NSString *)originUrlString
                           appendParameters:(NSDictionary<NSString *, NSString *> *)parameters;
 
+/// 根据 path 获取文件 URL，设置 不同步到 iCloude
 + (void)addDoNotBackupAttribute:(NSString *)path;
 
+/// 根据字符串构造 md5 字符串
 + (NSString *)md5StringFromString:(NSString *)string;
 
 + (NSString *)appVersionString;
