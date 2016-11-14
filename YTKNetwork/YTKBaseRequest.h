@@ -335,7 +335,7 @@ typedef void (^YTKRequestCompletionBlock)(__kindof YTKBaseRequest *request);
 ///  在请求成功之后在主线程上调用
 - (void)requestCompleteFilter;
 
-///  Called on background thread after request Failed but before switching to main thread. See also
+///  Called on background thread after request failed but before switching to main thread. See also
 ///  `requestCompletePreprocessor`.
 ///  在请求失败之后，但是在切换到主线程之前调用
 - (void)requestFailedPreprocessor;
